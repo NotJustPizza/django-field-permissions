@@ -17,13 +17,17 @@ class FieldPermissionSerializerMixin:
         user = self.context['request'].user
         model = self.Meta.model
         model_field_names = [f.name for f in model._meta.get_fields()]  # this might be too broad
-        for name in model_field_names:
-            if name in self.fields:
-                if not model.has_field_perm(model, user=user, field=name, operation='view'):
-                    self.fields.remove(name)
-                    continue
-                if not model.has_field_perm(model, user=user, field=name, operation='change'):
-                    self.fields[name].read_only = True
+        instances = self.instance or model()
+        if not isinstance(self.instance, list):
+            instances = [instances]
+        for instance in instances:
+            for name in model_field_names:
+                if name in self.fields:
+                    if not instance.has_field_perm(user=user, field=name, operation='view'):
+                        self.fields.pop(name)
+                        continue
+                    if not instance.has_field_perm(user=user, field=name, operation='change'):
+                        self.fields[name].read_only = True
 
 
 class FieldPermissionSerializer(FieldPermissionSerializerMixin, serializers.ModelSerializer):
